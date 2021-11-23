@@ -153,5 +153,8 @@ export const SlotProps = {
   },
   horizontal: {
     type: Boolean
+  },
+  emit: {
+    type: Function
   }
 }

@@ -10,7 +10,7 @@
   (global = global || self, global.VirtualList = factory(global.Vue));
 }(this, (function (Vue) { 'use strict';
 
-  Vue = Vue && Object.prototype.hasOwnProperty.call(Vue, 'default') ? Vue['default'] : Vue;
+  var Vue__default = 'default' in Vue ? Vue['default'] : Vue;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -631,7 +631,7 @@
     updated: function updated() {
       this.dispatchSizeChange();
     },
-    beforeDestroy: function beforeDestroy() {
+    beforeUnmount: function beforeUnmount() {
       if (this.resizeObserver) {
         this.resizeObserver.disconnect();
         this.resizeObserver = null;
@@ -648,7 +648,7 @@
     }
   }; // wrapping for item
 
-  var Item = Vue.component('virtual-list-item', {
+  var Item = Vue__default.component('virtual-list-item', {
     mixins: [Wrapper],
     props: ItemProps,
     render: function render(h) {
@@ -684,7 +684,7 @@
     }
   }); // wrapping for slot
 
-  var Slot = Vue.component('virtual-list-slot', {
+  var Slot = Vue__default.component('virtual-list-slot', {
     mixins: [Wrapper],
     props: SlotProps,
     render: function render(h) {
@@ -711,28 +711,12 @@
     // string value also use for aria role attribute
     FOOTER: 'tfoot'
   };
-  var VirtualList = Vue.component('virtual-list', {
+  var VirtualList = Vue.defineComponent('virtual-list', {
     props: VirtualProps,
     data: function data() {
       return {
         range: null
       };
-    },
-    watch: {
-      'dataSources.length': function dataSourcesLength() {
-        this.virtual.updateParam('uniqueIds', this.getUniqueIdFromDataSources());
-        this.virtual.handleDataSourcesChange();
-      },
-      keeps: function keeps(newValue) {
-        this.virtual.updateParam('keeps', newValue);
-        this.virtual.handleSlotSizeChange();
-      },
-      start: function start(newValue) {
-        this.scrollToIndex(newValue);
-      },
-      offset: function offset(newValue) {
-        this.scrollToOffset(newValue);
-      }
     },
     created: function created() {
       this.isHorizontal = this.direction === 'horizontal';
@@ -765,7 +749,7 @@
         });
       }
     },
-    beforeDestroy: function beforeDestroy() {
+    beforeUnmount: function beforeUnmount() {
       this.virtual.destroy();
 
       if (this.pageMode) {
@@ -938,7 +922,7 @@
       // get the real render slots based on range data
       // in-place patch strategy will try to reuse components as possible
       // so those components that are reused will not trigger lifecycle mounted
-      getRenderSlots: function getRenderSlots(h) {
+      getRenderSlots: function getRenderSlots() {
         var slots = [];
         var _this$range = this.range,
             start = _this$range.start,
@@ -961,7 +945,7 @@
             var uniqueKey = typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey];
 
             if (typeof uniqueKey === 'string' || typeof uniqueKey === 'number') {
-              slots.push(h(Item, {
+              slots.push(Vue.h(Item, {
                 props: {
                   index: index,
                   tag: itemTag,
@@ -990,7 +974,7 @@
     },
     // render function, a closer-to-the-compiler alternative to templates
     // https://vuejs.org/v2/guide/render-function.html#The-Data-Object-In-Depth
-    render: function render(h) {
+    render: function render() {
       var _this$$slots = this.$slots,
           header = _this$$slots.header,
           footer = _this$$slots.footer;
@@ -1013,13 +997,13 @@
         padding: isHorizontal ? "0px ".concat(padBehind, "px 0px ").concat(padFront, "px") : "".concat(padFront, "px 0px ").concat(padBehind, "px")
       };
       var wrapperStyle = wrapStyle ? Object.assign({}, wrapStyle, paddingStyle) : paddingStyle;
-      return h(rootTag, {
+      return Vue.h(rootTag, {
         ref: 'root',
         on: {
           '&scroll': !pageMode && this.onScroll
         }
       }, [// header slot
-      header ? h(Slot, {
+      header ? Vue.h(Slot, {
         "class": headerClass,
         style: headerStyle,
         props: {
@@ -1028,14 +1012,14 @@
           uniqueKey: SLOT_TYPE.HEADER
         }
       }, header) : null, // main list
-      h(wrapTag, {
+      Vue.h(wrapTag, {
         "class": wrapClass,
         attrs: {
           role: 'group'
         },
         style: wrapperStyle
-      }, this.getRenderSlots(h)), // footer slot
-      footer ? h(Slot, {
+      }, this.getRenderSlots()), // footer slot
+      footer ? Vue.h(Slot, {
         "class": footerClass,
         style: footerStyle,
         props: {
@@ -1044,7 +1028,7 @@
           uniqueKey: SLOT_TYPE.FOOTER
         }
       }, footer) : null, // an empty element use to scroll to bottom
-      h('div', {
+      Vue.h('div', {
         ref: 'shepherd',
         style: {
           width: isHorizontal ? '0px' : '100%',

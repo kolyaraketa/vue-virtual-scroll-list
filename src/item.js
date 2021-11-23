@@ -3,7 +3,7 @@
  * we need to know their size change at any time
  */
 
-import Vue from 'vue'
+import { defineComponent, h } from 'vue'
 import { ItemProps, SlotProps } from './props'
 
 const Wrapper = {
@@ -25,7 +25,7 @@ const Wrapper = {
     this.dispatchSizeChange()
   },
 
-  beforeDestroy () {
+  beforeUnmount () {
     if (this.resizeObserver) {
       this.resizeObserver.disconnect()
       this.resizeObserver = null
@@ -45,45 +45,51 @@ const Wrapper = {
 }
 
 // wrapping for item
-export const Item = Vue.component('virtual-list-item', {
+export const Item = defineComponent({
+  name: 'VirtualListItem',
   mixins: [Wrapper],
 
   props: ItemProps,
 
-  render (h) {
-    const { tag, component, extraProps = {}, index, source, scopedSlots = {}, uniqueKey, slotComponent } = this
-    const props = {
+  render () {
+    const {
+      tag,
+      extraProps = {},
+      index,
+      source,
+      scopedSlots = {},
+      uniqueKey,
+      component,
+      slotComponent
+    } = this
+    const propsInner = {
       ...extraProps,
       source,
       index
     }
-
-    return h(tag, {
-      key: uniqueKey,
-      attrs: {
-        role: 'listitem'
-      }
-    }, [slotComponent ? h('div', slotComponent({ item: source, index: index, scope: props })) : h(component, {
-      props,
-      scopedSlots: scopedSlots
-    })])
+    return h(
+      tag,
+      { key: uniqueKey, role: 'listitem' },
+      [
+        typeof slotComponent === 'function'
+          ? h('div', slotComponent({ item: source, index: index, scope: ItemProps }))
+          : h(component, { ...propsInner, scopedSlots })
+      ]
+    )
   }
 })
 
 // wrapping for slot
-export const Slot = Vue.component('virtual-list-slot', {
+export const Slot = defineComponent({
+  name: 'VirtualListSlot',
   mixins: [Wrapper],
-
   props: SlotProps,
 
-  render (h) {
-    const { tag, uniqueKey } = this
-
-    return h(tag, {
-      key: uniqueKey,
-      attrs: {
-        role: uniqueKey
-      }
-    }, this.$slots.default)
+  render () {
+    return h(
+      this.tag,
+      {},
+      this.$slots.default()
+    )
   }
 })
