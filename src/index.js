@@ -313,6 +313,7 @@ const VirtualList = defineComponent({
                 component: dataComponent,
                 slotComponent,
                 scopedSlots: itemScopedSlots,
+                key: uniqueKey,
                 style: itemStyle,
                 class: `${itemClass}${this.itemClassAdd ? ' ' + this.itemClassAdd(index) : ''}`
               })

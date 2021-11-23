@@ -51,7 +51,7 @@ export const Item = defineComponent({
 
   props: ItemProps,
 
-  render () {
+  setup (props) {
     const {
       tag,
       extraProps = {},
@@ -61,18 +61,18 @@ export const Item = defineComponent({
       uniqueKey,
       component,
       slotComponent
-    } = this
+    } = props
     const propsInner = {
       ...extraProps,
       source,
       index
     }
-    return h(
+    return () => h(
       tag,
       { key: uniqueKey, role: 'listitem' },
       [
         typeof slotComponent === 'function'
-          ? h('div', slotComponent({ item: source, index: index, scope: ItemProps }))
+          ? h('div', slotComponent({ item: source, index: index, scope: props }))
           : h(component, { ...propsInner, scopedSlots })
       ]
     )
