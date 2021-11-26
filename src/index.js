@@ -9,7 +9,7 @@ import { VirtualProps } from './props'
 
 const ID_EL = {
   ROOT: 'vlist-root',
-  SHEPART: 'vlist-shepart'
+  SHEPHERD: 'vlist-shepherd'
 }
 const EVENT_TYPE = {
   ITEM: 'item_resize',
@@ -40,8 +40,7 @@ const getRenderSlots = ({ props, range, $slots, emit }) => {
   for (let index = range.start; index <= range.end; index++) {
     const dataSource = dataSources[index]
     if (dataSource) {
-      const uniqueKey =
-        typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey]
+      const uniqueKey = typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey]
       if (typeof uniqueKey === 'string' || typeof uniqueKey === 'number') {
         slots.push(
           h(Item, {
@@ -88,7 +87,10 @@ const VirtualListComponent = defineComponent({
   watch: {
     'dataSources.length': {
       handler () {
-        this.virtual.updateParam('uniqueIds', this.getUniqueIdFromDataSources(this.dataKey, this.dataSources))
+        this.virtual.updateParam(
+          'uniqueIds',
+          this.getUniqueIdFromDataSources(this.dataKey, this.dataSources)
+        )
         this.virtual.handleDataSourcesChange()
       },
       deep: true
@@ -137,46 +139,6 @@ const VirtualListComponent = defineComponent({
   },
 
   methods: {
-    // get item size by id
-    getSize (id) {
-      return this.virtual.sizes.get(id)
-    },
-
-    // get the total number of stored (rendered) items
-    getSizes () {
-      return this.virtual.sizes.size
-    },
-
-    // set current scroll position to a expectant index
-    scrollToIndex (index) {
-      // scroll to bottom
-      if (index >= this.dataSources.length - 1) {
-        this.scrollToBottom()
-      } else {
-        const offset = this.virtual.getOffset(index)
-        this.scrollToOffset(offset)
-      }
-    },
-
-    // set current scroll position to bottom
-    scrollToBottom () {
-      const { shepherd } = this
-      if (shepherd) {
-        const offset = shepherd[this.isHorizontal ? 'offsetLeft' : 'offsetTop']
-        this.scrollToOffset(offset)
-
-        // check if it's really scrolled to the bottom
-        // maybe list doesn't render and calculate to last range
-        // so we need retry in next event loop until it really at bottom
-        setTimeout(() => {
-          const el = this.root
-          if (this.getOffset(el, this.pageMode, this.directionKey) + this.getClientSize(el, this.pageMode, this.isHorizontal) < this.getScrollSize(el, this.pageMode, this.isHorizontal)) {
-            this.scrollToBottom()
-          }
-        }, 3)
-      }
-    },
-
     // when using page mode we need update slot header size manually
     // taking root offset relative to the browser as slot header size
     updatePageModeFront () {
@@ -190,13 +152,6 @@ const VirtualListComponent = defineComponent({
         this.virtual.updateParam('slotHeaderSize', offsetFront)
       }
     },
-
-    // // reset all state back to initial
-    // reset () {
-    //   this.virtual.destroy()
-    //   this.scrollToOffset(0)
-    //   this.installVirtual()
-    // },
 
     // ----------- public method end -----------
 
@@ -220,7 +175,7 @@ const VirtualListComponent = defineComponent({
     const isHorizontal = ref(null)
     const directionKey = ref(null)
     const root = ref(null)
-    const shepart = ref(null)
+    const shepherd = ref(null)
 
     const getUniqueIdFromDataSources = (dataKey, dataSources) => {
       return dataSources.map((dataSource) =>
@@ -229,7 +184,7 @@ const VirtualListComponent = defineComponent({
     }
 
     // here is the rerendering entry
-    const onRangeChanged = r => {
+    const onRangeChanged = (r) => {
       range.value = r
     }
 
@@ -295,15 +250,12 @@ const VirtualListComponent = defineComponent({
 
       if (virtual.value.isFront() && !!dataSources.length && offset - topThreshold <= 0) {
         emit('totop')
-      } else if (
-        virtual.value.isBehind() &&
-        offset + clientSize >= scrollSize
-      ) {
+      } else if (virtual.value.isBehind() && offset + clientSize >= scrollSize) {
         emit('tobottom')
       }
     }
 
-    const onScroll = e => {
+    const onScroll = (e) => {
       const offset = getOffset(e.target, pageMode, directionKey.value)
       const clientSize = getClientSize(e.target, pageMode, isHorizontal.value)
       const scrollSize = getScrollSize(e.target, pageMode, isHorizontal.value)
@@ -345,7 +297,7 @@ const VirtualListComponent = defineComponent({
     }
 
     // set current scroll position to a expectant offset
-    const scrollToOffset = offset => {
+    const scrollToOffset = (offset) => {
       if (pageMode) {
         if (!document) return
         document.body[directionKey.value] = offset
@@ -357,6 +309,47 @@ const VirtualListComponent = defineComponent({
         root.value[directionKey.value] = offset
       }
     }
+
+    // set current scroll position to bottom
+    const scrollToBottom = () => {
+      if (!shepherd.value) {
+        shepherd.value = document.getElementById(ID_EL.SHEPHERD)
+      }
+      const offset = shepherd[isHorizontal.value ? 'offsetLeft' : 'offsetTop']
+      scrollToOffset(offset)
+
+      // check if it's really scrolled to the bottom
+      // maybe list doesn't render and calculate to last range
+      // so we need retry in next event loop until it really at bottom
+      setTimeout(() => {
+        const el = root.value
+        if (
+          el &&
+          getOffset(el, this.pageMode, this.directionKey) +
+            getClientSize(el, pageMode.value, isHorizontal.value) <
+            getScrollSize(el, pageMode.value, isHorizontal.value)
+        ) {
+          scrollToBottom()
+        }
+      }, 3)
+    }
+
+    // set current scroll position to a expectant index
+    const scrollToIndex = (index) => {
+      // scroll to bottom
+      if (index >= props.dataSources.length - 1) {
+        scrollToBottom()
+      } else {
+        const offset = virtual.value.getOffset(index)
+        scrollToOffset(offset)
+      }
+    }
+
+    // // get item size by id
+    // const getSize = id => virtual.value.sizes.get(id)
+
+    // // get the total number of stored (rendered) items
+    // const getSizes = () => virtual.value.sizes.size
 
     // reset all state back to initial
     const reset = () => {
@@ -376,14 +369,13 @@ const VirtualListComponent = defineComponent({
       getOffset,
       getClientSize,
       getScrollSize,
+      scrollToIndex,
       installVirtual,
       getUniqueIdFromDataSources
     })
 
-    return () => h(
-      rootTag,
-      { onScroll: !pageMode && onScroll, id: ID_EL.ROOT },
-      [
+    return () =>
+      h(rootTag, { onScroll: !pageMode && onScroll, id: ID_EL.ROOT }, [
         // header slot
         header
           ? h(
@@ -429,11 +421,13 @@ const VirtualListComponent = defineComponent({
 
         // an empty element use to scroll to bottom
         h('div', {
-          id: ID_EL.SHEPART,
-          style: { width: isHorizontal.value ? '0px' : '100%', height: isHorizontal.value ? '100%' : '0px' }
+          id: ID_EL.SHEPHERD,
+          style: {
+            width: isHorizontal.value ? '0px' : '100%',
+            height: isHorizontal.value ? '100%' : '0px'
+          }
         })
-      ]
-    )
+      ])
   }
 })
 
