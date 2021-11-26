@@ -8,9 +8,7 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('vue')) :
   typeof define === 'function' && define.amd ? define(['vue'], factory) :
   (global = global || self, global.VirtualList = factory(global.Vue));
-}(this, (function (Vue) { 'use strict';
-
-  var Vue__default = 'default' in Vue ? Vue['default'] : Vue;
+}(this, (function (vue) { 'use strict';
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -588,6 +586,9 @@
     slotComponent: {
       type: Function
     },
+    emit: {
+      type: Function
+    },
     uniqueKey: {
       type: [String, Number]
     },
@@ -595,6 +596,9 @@
       type: Object
     },
     scopedSlots: {
+      type: Object
+    },
+    range: {
       type: Object
     }
   };
@@ -610,6 +614,9 @@
     },
     horizontal: {
       type: Boolean
+    },
+    emit: {
+      type: Function
     }
   };
 
@@ -643,65 +650,56 @@
       },
       // tell parent current size identify by unqiue key
       dispatchSizeChange: function dispatchSizeChange() {
-        this.$parent.$emit(this.event, this.uniqueKey, this.getCurrentSize(), this.hasInitial);
+        this.emit(this.event, this.uniqueKey, this.getCurrentSize(), this.hasInitial);
       }
     }
   }; // wrapping for item
 
-  var Item = Vue__default.component('virtual-list-item', {
+  var Item = vue.defineComponent({
+    name: 'VirtualListItem',
     mixins: [Wrapper],
     props: ItemProps,
-    render: function render(h) {
-      var tag = this.tag,
-          component = this.component,
-          _this$extraProps = this.extraProps,
-          extraProps = _this$extraProps === void 0 ? {} : _this$extraProps,
-          index = this.index,
-          source = this.source,
-          _this$scopedSlots = this.scopedSlots,
-          scopedSlots = _this$scopedSlots === void 0 ? {} : _this$scopedSlots,
-          uniqueKey = this.uniqueKey,
-          slotComponent = this.slotComponent;
+    setup: function setup(props) {
+      var tag = props.tag,
+          _props$extraProps = props.extraProps,
+          extraProps = _props$extraProps === void 0 ? {} : _props$extraProps,
+          index = props.index,
+          source = props.source,
+          _props$scopedSlots = props.scopedSlots,
+          scopedSlots = _props$scopedSlots === void 0 ? {} : _props$scopedSlots,
+          uniqueKey = props.uniqueKey,
+          component = props.component,
+          slotComponent = props.slotComponent;
 
-      var props = _objectSpread2({}, extraProps, {
+      var propsInner = _objectSpread2({}, extraProps, {
         source: source,
         index: index
       });
 
-      return h(tag, {
-        key: uniqueKey,
-        attrs: {
+      return function () {
+        return vue.h(tag, {
+          key: uniqueKey,
           role: 'listitem'
-        }
-      }, [slotComponent ? h('div', slotComponent({
-        item: source,
-        index: index,
-        scope: props
-      })) : h(component, {
-        props: props,
-        scopedSlots: scopedSlots
-      })]);
+        }, [typeof slotComponent === 'function' ? vue.h('div', slotComponent({
+          item: source,
+          index: index,
+          scope: props
+        })) : vue.h(component, _objectSpread2({}, propsInner, {
+          scopedSlots: scopedSlots
+        }))]);
+      };
     }
   }); // wrapping for slot
 
-  var Slot = Vue__default.component('virtual-list-slot', {
+  var Slot = vue.defineComponent({
+    name: 'VirtualListSlot',
     mixins: [Wrapper],
     props: SlotProps,
-    render: function render(h) {
-      var tag = this.tag,
-          uniqueKey = this.uniqueKey;
-      return h(tag, {
-        key: uniqueKey,
-        attrs: {
-          role: uniqueKey
-        }
-      }, this.$slots["default"]);
+    render: function render() {
+      return vue.h(this.tag, {}, this.$slots["default"]());
     }
   });
 
-  /**
-   * virtual list default component
-   */
   var EVENT_TYPE = {
     ITEM: 'item_resize',
     SLOT: 'slot_resize'
@@ -710,23 +708,92 @@
     HEADER: 'thead',
     // string value also use for aria role attribute
     FOOTER: 'tfoot'
+  }; // get the real render slots based on range data
+  // in-place patch strategy will try to reuse components as possible
+  // so those components that are reused will not trigger lifecycle mounted
+
+  var getRenderSlots = function getRenderSlots(_ref) {
+    var props = _ref.props,
+        range = _ref.range,
+        $slots = _ref.$slots,
+        emit = _ref.emit;
+    var slots = [];
+    var dataSources = props.dataSources,
+        dataKey = props.dataKey,
+        itemClass = props.itemClass,
+        itemTag = props.itemTag,
+        itemStyle = props.itemStyle,
+        isHorizontal = props.isHorizontal,
+        extraProps = props.extraProps,
+        dataComponent = props.dataComponent,
+        itemScopedSlots = props.itemScopedSlots;
+    var slotComponent = $slots && $slots.item;
+
+    for (var index = range.start; index <= range.end; index++) {
+      var dataSource = dataSources[index];
+
+      if (dataSource) {
+        var uniqueKey = typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey];
+
+        if (typeof uniqueKey === 'string' || typeof uniqueKey === 'number') {
+          slots.push(vue.h(Item, {
+            index: index,
+            emit: emit,
+            tag: itemTag,
+            event: EVENT_TYPE.ITEM,
+            horizontal: isHorizontal,
+            uniqueKey: uniqueKey,
+            source: dataSource,
+            extraProps: extraProps,
+            component: dataComponent,
+            slotComponent: slotComponent,
+            scopedSlots: itemScopedSlots,
+            range: range,
+            key: uniqueKey,
+            style: itemStyle,
+            "class": "".concat(itemClass).concat(props.itemClassAdd ? ' ' + props.itemClassAdd(index) : '')
+          }));
+        } else {
+          console.warn("Cannot get the data-key '".concat(dataKey, "' from data-sources."));
+        }
+      } else {
+        console.warn("Cannot get the index '".concat(index, "' from data-sources."));
+      }
+    }
+
+    return slots;
   };
-  var VirtualList = Vue.defineComponent('virtual-list', {
+
+  var VirtualListComponent = vue.defineComponent({
     props: VirtualProps,
+    components: {
+      Item: Item,
+      Slot: Slot
+    },
     data: function data() {
       return {
-        range: null
+        // range: null
+        root: null,
+        shepherd: null
       };
     },
-    created: function created() {
-      this.isHorizontal = this.direction === 'horizontal';
-      this.directionKey = this.isHorizontal ? 'scrollLeft' : 'scrollTop';
-      this.installVirtual(); // listen item size change
-
-      this.$on(EVENT_TYPE.ITEM, this.onItemResized); // listen slot size change
-
-      if (this.$slots.header || this.$slots.footer) {
-        this.$on(EVENT_TYPE.SLOT, this.onSlotResized);
+    watch: {
+      'dataSources.length': {
+        handler: function handler() {
+          this.virtual.updateParam('uniqueIds', this.getUniqueIdFromDataSources(this.dataKey, this.dataSources));
+          this.virtual.handleDataSourcesChange();
+        },
+        deep: true
+      },
+      keeps: function keeps(newValue) {
+        this.virtual.updateParam('keeps', newValue);
+        this.virtual.handleSlotSizeChange();
+      },
+      start: function start(newValue) {
+        this.scrollToIndex(newValue);
+      },
+      offset: function offset(newValue) {
+        this.scrollToOffset(newValue);
       }
     },
     // set back offset when awake from keep-alive
@@ -734,7 +801,9 @@
       this.scrollToOffset(this.virtual.offset);
     },
     mounted: function mounted() {
-      // set position
+      this.root = document.getElementById('vvsl-root');
+      this.shepart = document.getElementById('vvsl-shepart'); // set position
+
       if (this.start) {
         this.scrollToIndex(this.start);
       } else if (this.offset) {
@@ -765,44 +834,13 @@
       getSizes: function getSizes() {
         return this.virtual.sizes.size;
       },
-      // return current scroll offset
-      getOffset: function getOffset() {
-        if (this.pageMode) {
-          return document.documentElement[this.directionKey] || document.body[this.directionKey];
-        } else {
-          var root = this.$refs.root;
-          return root ? Math.ceil(root[this.directionKey]) : 0;
-        }
-      },
-      // return client viewport size
-      getClientSize: function getClientSize() {
-        var key = this.isHorizontal ? 'clientWidth' : 'clientHeight';
-
-        if (this.pageMode) {
-          return document.documentElement[key] || document.body[key];
-        } else {
-          var root = this.$refs.root;
-          return root ? Math.ceil(root[key]) : 0;
-        }
-      },
-      // return all scroll size
-      getScrollSize: function getScrollSize() {
-        var key = this.isHorizontal ? 'scrollWidth' : 'scrollHeight';
-
-        if (this.pageMode) {
-          return document.documentElement[key] || document.body[key];
-        } else {
-          var root = this.$refs.root;
-          return root ? Math.ceil(root[key]) : 0;
-        }
-      },
       // set current scroll position to a expectant offset
       scrollToOffset: function scrollToOffset(offset) {
         if (this.pageMode) {
           document.body[this.directionKey] = offset;
           document.documentElement[this.directionKey] = offset;
         } else {
-          var root = this.$refs.root;
+          var root = this.root;
 
           if (root) {
             root[this.directionKey] = offset;
@@ -823,7 +861,7 @@
       scrollToBottom: function scrollToBottom() {
         var _this = this;
 
-        var shepherd = this.$refs.shepherd;
+        var shepherd = this.shepherd;
 
         if (shepherd) {
           var offset = shepherd[this.isHorizontal ? 'offsetLeft' : 'offsetTop'];
@@ -832,7 +870,9 @@
           // so we need retry in next event loop until it really at bottom
 
           setTimeout(function () {
-            if (_this.getOffset() + _this.getClientSize() < _this.getScrollSize()) {
+            var el = _this.root;
+
+            if (_this.getOffset(el, _this.pageMode, _this.directionKey) + _this.getClientSize(el, _this.pageMode, _this.isHorizontal) < _this.getScrollSize(el, _this.pageMode, _this.isHorizontal)) {
               _this.scrollToBottom();
             }
           }, 3);
@@ -841,7 +881,7 @@
       // when using page mode we need update slot header size manually
       // taking root offset relative to the browser as slot header size
       updatePageModeFront: function updatePageModeFront() {
-        var root = this.$refs.root;
+        var root = this.root;
 
         if (root) {
           var rect = root.getBoundingClientRect();
@@ -857,30 +897,6 @@
         this.installVirtual();
       },
       // ----------- public method end -----------
-      installVirtual: function installVirtual() {
-        this.virtual = new Virtual({
-          slotHeaderSize: 0,
-          slotFooterSize: 0,
-          keeps: this.keeps,
-          estimateSize: this.estimateSize,
-          buffer: Math.round(this.keeps / 3),
-          // recommend for a third of keeps
-          uniqueIds: this.getUniqueIdFromDataSources()
-        }, this.onRangeChanged); // sync initial range
-
-        this.range = this.virtual.getRange();
-      },
-      getUniqueIdFromDataSources: function getUniqueIdFromDataSources() {
-        var dataKey = this.dataKey;
-        return this.dataSources.map(function (dataSource) {
-          return typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey];
-        });
-      },
-      // event called when each item mounted or size changed
-      onItemResized: function onItemResized(id, size) {
-        this.virtual.saveSize(id, size);
-        this.$emit('resized', id, size);
-      },
       // event called when slot mounted or size changed
       onSlotResized: function onSlotResized(type, size, hasInit) {
         if (type === SLOT_TYPE.HEADER) {
@@ -892,152 +908,191 @@
         if (hasInit) {
           this.virtual.handleSlotSizeChange();
         }
-      },
-      // here is the rerendering entry
-      onRangeChanged: function onRangeChanged(range) {
-        this.range = range;
-      },
-      onScroll: function onScroll(evt) {
-        var offset = this.getOffset();
-        var clientSize = this.getClientSize();
-        var scrollSize = this.getScrollSize(); // iOS scroll-spring-back behavior will make direction mistake
+      }
+    },
+    setup: function setup(props, _ref2) {
+      var emit = _ref2.emit,
+          slots = _ref2.slots,
+          expose = _ref2.expose;
+      var range = vue.ref({
+        start: 0,
+        end: 0,
+        padFront: 0,
+        padBehind: 0
+      });
+      var virtual = vue.ref(null);
+      var isHorizontal = vue.ref(null);
+      var directionKey = vue.ref(null);
+      var test = vue.ref(0);
+
+      var getUniqueIdFromDataSources = function getUniqueIdFromDataSources(dataKey, dataSources) {
+        return dataSources.map(function (dataSource) {
+          return typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey];
+        });
+      }; // here is the rerendering entry
+
+
+      var onRangeChanged = function onRangeChanged(r) {
+        range.value = r;
+      };
+
+      var installVirtual = function installVirtual() {
+        var virtual = new Virtual({
+          slotHeaderSize: 0,
+          slotFooterSize: 0,
+          keeps: props.keeps,
+          estimateSize: props.estimateSize,
+          buffer: Math.round(props.keeps / 3),
+          // recommend for a third of keeps
+          uniqueIds: getUniqueIdFromDataSources(props.dataKey, props.dataSources)
+        }, onRangeChanged);
+        return {
+          virtual: virtual,
+          value: virtual.getRange()
+        };
+      };
+
+      var header = slots.header,
+          footer = slots.footer;
+      var pageMode = props.pageMode,
+          rootTag = props.rootTag,
+          wrapClass = props.wrapClass,
+          wrapStyle = props.wrapStyle,
+          headerTag = props.headerTag,
+          headerClass = props.headerClass,
+          headerStyle = props.headerStyle,
+          footerTag = props.footerTag,
+          footerClass = props.footerClass,
+          footerStyle = props.footerStyle,
+          topThreshold = props.topThreshold;
+      isHorizontal.value = props.direction === 'horizontal';
+      directionKey.value = isHorizontal.value ? 'scrollLeft' : 'scrollTop';
+      var newVirtual = installVirtual();
+      virtual.value = newVirtual.virtual;
+      range.value = newVirtual.value; // event called when each item mounted or size changed
+      // const onItemResized = (id, size) => {
+      //   virtual.value.saveSize(id, size)
+      //   emit('resized', id, size)
+      // }
+      // listen item size change
+      // this.$on(EVENT_TYPE.ITEM, this.onItemResized)
+      // listen slot size change
+      // if (this.$slots.header || this.$slots.footer) {
+      //   this.$on(EVENT_TYPE.SLOT, this.onSlotResized)
+      // }
+      // emit event in special position
+
+      var emitEvent = function emitEvent(offset, clientSize, scrollSize, evt, dataSources) {
+        emit('scroll', evt, virtual.value.getRange());
+
+        if (virtual.value.isFront() && !!dataSources.length && offset - topThreshold <= 0) {
+          emit('totop');
+        } else if (virtual.value.isBehind() && offset + clientSize >= scrollSize) {
+          emit('tobottom');
+        }
+      };
+
+      var onScroll = function onScroll(e) {
+        var offset = getOffset(e.target, pageMode, directionKey.value);
+        var clientSize = getClientSize(e.target, pageMode, isHorizontal.value);
+        var scrollSize = getScrollSize(e.target, pageMode, isHorizontal.value); // iOS scroll-spring-back behavior will make direction mistake
 
         if (offset < 0 || offset + clientSize > scrollSize + 1 || !scrollSize) {
           return;
         }
 
-        this.virtual.handleScroll(offset);
-        this.emitEvent(offset, clientSize, scrollSize, evt);
-      },
-      // emit event in special position
-      emitEvent: function emitEvent(offset, clientSize, scrollSize, evt) {
-        this.$emit('scroll', evt, this.virtual.getRange());
+        test.value++;
+        virtual.value.handleScroll(offset);
+        emitEvent(offset, clientSize, scrollSize, e, props.dataSources);
+      }; // return current scroll offset
 
-        if (this.virtual.isFront() && !!this.dataSources.length && offset - this.topThreshold <= 0) {
-          this.$emit('totop');
-        } else if (this.virtual.isBehind() && offset + clientSize + this.bottomThreshold >= scrollSize) {
-          this.$emit('tobottom');
+
+      var getOffset = function getOffset(el, pageMode, directionKey) {
+        if (pageMode) {
+          return document.documentElement[directionKey] || document.body[directionKey];
+        } else {
+          return el ? Math.ceil(el[directionKey]) : 0;
         }
-      },
-      // get the real render slots based on range data
-      // in-place patch strategy will try to reuse components as possible
-      // so those components that are reused will not trigger lifecycle mounted
-      getRenderSlots: function getRenderSlots() {
-        var slots = [];
-        var _this$range = this.range,
-            start = _this$range.start,
-            end = _this$range.end;
-        var dataSources = this.dataSources,
-            dataKey = this.dataKey,
-            itemClass = this.itemClass,
-            itemTag = this.itemTag,
-            itemStyle = this.itemStyle,
-            isHorizontal = this.isHorizontal,
-            extraProps = this.extraProps,
-            dataComponent = this.dataComponent,
-            itemScopedSlots = this.itemScopedSlots;
-        var slotComponent = this.$scopedSlots && this.$scopedSlots.item;
+      }; // return client viewport size
 
-        for (var index = start; index <= end; index++) {
-          var dataSource = dataSources[index];
 
-          if (dataSource) {
-            var uniqueKey = typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey];
+      var getClientSize = function getClientSize(el, pageMode, isHorizontal) {
+        var key = isHorizontal ? 'clientWidth' : 'clientHeight';
 
-            if (typeof uniqueKey === 'string' || typeof uniqueKey === 'number') {
-              slots.push(Vue.h(Item, {
-                props: {
-                  index: index,
-                  tag: itemTag,
-                  event: EVENT_TYPE.ITEM,
-                  horizontal: isHorizontal,
-                  uniqueKey: uniqueKey,
-                  source: dataSource,
-                  extraProps: extraProps,
-                  component: dataComponent,
-                  slotComponent: slotComponent,
-                  scopedSlots: itemScopedSlots
-                },
-                style: itemStyle,
-                "class": "".concat(itemClass).concat(this.itemClassAdd ? ' ' + this.itemClassAdd(index) : '')
-              }));
-            } else {
-              console.warn("Cannot get the data-key '".concat(dataKey, "' from data-sources."));
-            }
-          } else {
-            console.warn("Cannot get the index '".concat(index, "' from data-sources."));
-          }
+        if (pageMode) {
+          return document.documentElement[key] || document.body[key];
+        } else {
+          return el ? Math.ceil(el[key]) : 0;
         }
+      }; // return all scroll size
 
-        return slots;
-      }
-    },
-    // render function, a closer-to-the-compiler alternative to templates
-    // https://vuejs.org/v2/guide/render-function.html#The-Data-Object-In-Depth
-    render: function render() {
-      var _this$$slots = this.$slots,
-          header = _this$$slots.header,
-          footer = _this$$slots.footer;
-      var _this$range2 = this.range,
-          padFront = _this$range2.padFront,
-          padBehind = _this$range2.padBehind;
-      var isHorizontal = this.isHorizontal,
-          pageMode = this.pageMode,
-          rootTag = this.rootTag,
-          wrapTag = this.wrapTag,
-          wrapClass = this.wrapClass,
-          wrapStyle = this.wrapStyle,
-          headerTag = this.headerTag,
-          headerClass = this.headerClass,
-          headerStyle = this.headerStyle,
-          footerTag = this.footerTag,
-          footerClass = this.footerClass,
-          footerStyle = this.footerStyle;
-      var paddingStyle = {
-        padding: isHorizontal ? "0px ".concat(padBehind, "px 0px ").concat(padFront, "px") : "".concat(padFront, "px 0px ").concat(padBehind, "px")
+
+      var getScrollSize = function getScrollSize(el, pageMode, isHorizontal) {
+        var key = isHorizontal ? 'scrollWidth' : 'scrollHeight';
+
+        if (pageMode) {
+          return document.documentElement[key] || document.body[key];
+        } else {
+          return el ? Math.ceil(el[key]) : 0;
+        }
       };
-      var wrapperStyle = wrapStyle ? Object.assign({}, wrapStyle, paddingStyle) : paddingStyle;
-      return Vue.h(rootTag, {
-        ref: 'root',
-        on: {
-          '&scroll': !pageMode && this.onScroll
-        }
-      }, [// header slot
-      header ? Vue.h(Slot, {
-        "class": headerClass,
-        style: headerStyle,
-        props: {
+
+      expose({
+        range: range,
+        virtual: virtual,
+        isHorizontal: isHorizontal,
+        directionKey: directionKey,
+        onScroll: onScroll,
+        emitEvent: emitEvent,
+        getOffset: getOffset,
+        getClientSize: getClientSize,
+        getScrollSize: getScrollSize,
+        installVirtual: installVirtual,
+        getUniqueIdFromDataSources: getUniqueIdFromDataSources
+      });
+      return function () {
+        return vue.h(rootTag, {
+          onScroll: !pageMode && onScroll,
+          "class": 'vvsl-root'
+        }, [// header slot
+        header ? vue.h(Slot, {
+          "class": headerClass,
+          style: headerStyle,
           tag: headerTag,
           event: EVENT_TYPE.SLOT,
           uniqueKey: SLOT_TYPE.HEADER
-        }
-      }, header) : null, // main list
-      Vue.h(wrapTag, {
-        "class": wrapClass,
-        attrs: {
-          role: 'group'
-        },
-        style: wrapperStyle
-      }, this.getRenderSlots()), // footer slot
-      footer ? Vue.h(Slot, {
-        "class": footerClass,
-        style: footerStyle,
-        props: {
-          tag: footerTag,
-          event: EVENT_TYPE.SLOT,
-          uniqueKey: SLOT_TYPE.FOOTER
-        }
-      }, footer) : null, // an empty element use to scroll to bottom
-      Vue.h('div', {
-        ref: 'shepherd',
-        style: {
-          width: isHorizontal ? '0px' : '100%',
-          height: isHorizontal ? '100%' : '0px'
-        }
-      })]);
+        }, header) : null, vue.h(props.wrapTag, {
+          "class": wrapClass,
+          role: 'group',
+          style: _objectSpread2({}, wrapStyle, {
+            padding: isHorizontal.value ? "0px ".concat(range.value.padBehind, "px 0px ").concat(range.value.padFront, "px") : "".concat(range.value.padFront, "px 0px ").concat(range.value.padBehind, "px")
+          })
+        }, getRenderSlots({
+          props: props,
+          range: range.value,
+          $slots: slots,
+          emit: emit
+        })), // footer slot
+        footer ? vue.h(Slot, {
+          "class": footerClass,
+          style: footerStyle,
+          props: {
+            tag: footerTag,
+            event: EVENT_TYPE.SLOT,
+            uniqueKey: SLOT_TYPE.FOOTER
+          }
+        }, footer) : null, // an empty element use to scroll to bottom
+        vue.h('div', {
+          "class": 'vvsl-shepart',
+          style: {
+            width: isHorizontal.value ? '0px' : '100%',
+            height: isHorizontal.value ? '100%' : '0px'
+          }
+        })]);
+      };
     }
   });
 
-  return VirtualList;
+  return VirtualListComponent;
 
 })));
