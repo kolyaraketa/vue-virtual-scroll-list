@@ -7,6 +7,10 @@ import Virtual from './virtual'
 import { Item, Slot } from './item'
 import { VirtualProps } from './props'
 
+const ID_EL = {
+  ROOT: 'vlist-root',
+  SHEPART: 'vlist-shepart'
+}
 const EVENT_TYPE = {
   ITEM: 'item_resize',
   SLOT: 'slot_resize'
@@ -110,8 +114,6 @@ const VirtualListComponent = defineComponent({
   },
 
   mounted () {
-    this.root = document.getElementById('vvsl-root')
-    this.shepart = document.getElementById('vvsl-shepart')
     // set position
     if (this.start) {
       this.scrollToIndex(this.start)
@@ -143,19 +145,6 @@ const VirtualListComponent = defineComponent({
     // get the total number of stored (rendered) items
     getSizes () {
       return this.virtual.sizes.size
-    },
-
-    // set current scroll position to a expectant offset
-    scrollToOffset (offset) {
-      if (this.pageMode) {
-        document.body[this.directionKey] = offset
-        document.documentElement[this.directionKey] = offset
-      } else {
-        const root = this.root
-        if (root) {
-          root[this.directionKey] = offset
-        }
-      }
     },
 
     // set current scroll position to a expectant index
@@ -202,12 +191,12 @@ const VirtualListComponent = defineComponent({
       }
     },
 
-    // reset all state back to initial
-    reset () {
-      this.virtual.destroy()
-      this.scrollToOffset(0)
-      this.installVirtual()
-    },
+    // // reset all state back to initial
+    // reset () {
+    //   this.virtual.destroy()
+    //   this.scrollToOffset(0)
+    //   this.installVirtual()
+    // },
 
     // ----------- public method end -----------
 
@@ -230,7 +219,8 @@ const VirtualListComponent = defineComponent({
     const virtual = ref(null)
     const isHorizontal = ref(null)
     const directionKey = ref(null)
-    const test = ref(0)
+    const root = ref(null)
+    const shepart = ref(null)
 
     const getUniqueIdFromDataSources = (dataKey, dataSources) => {
       return dataSources.map((dataSource) =>
@@ -258,6 +248,12 @@ const VirtualListComponent = defineComponent({
       return { virtual, value: virtual.getRange() }
     }
 
+    const installNewVirtual = () => {
+      const newVirtual = installVirtual()
+      virtual.value = newVirtual.virtual
+      range.value = newVirtual.value
+    }
+
     const { header, footer } = slots
     const {
       pageMode,
@@ -275,9 +271,10 @@ const VirtualListComponent = defineComponent({
 
     isHorizontal.value = props.direction === 'horizontal'
     directionKey.value = isHorizontal.value ? 'scrollLeft' : 'scrollTop'
-    const newVirtual = installVirtual()
-    virtual.value = newVirtual.virtual
-    range.value = newVirtual.value
+    // const newVirtual = installVirtual()
+    // virtual.value = newVirtual.virtual
+    // range.value = newVirtual.value
+    installNewVirtual()
 
     // event called when each item mounted or size changed
     // const onItemResized = (id, size) => {
@@ -314,7 +311,6 @@ const VirtualListComponent = defineComponent({
       if (offset < 0 || offset + clientSize > scrollSize + 1 || !scrollSize) {
         return
       }
-      test.value++
       virtual.value.handleScroll(offset)
       emitEvent(offset, clientSize, scrollSize, e, props.dataSources)
     }
@@ -348,8 +344,30 @@ const VirtualListComponent = defineComponent({
       }
     }
 
+    // set current scroll position to a expectant offset
+    const scrollToOffset = offset => {
+      if (pageMode) {
+        if (!document) return
+        document.body[directionKey.value] = offset
+        document.documentElement[directionKey.value] = offset
+      } else {
+        if (!root.value) {
+          root.value = document.getElementById(ID_EL.ROOT)
+        }
+        root.value[directionKey.value] = offset
+      }
+    }
+
+    // reset all state back to initial
+    const reset = () => {
+      virtual.value.destroy()
+      scrollToOffset(0)
+      installNewVirtual()
+    }
+
     expose({
       range,
+      reset,
       virtual,
       isHorizontal,
       directionKey,
@@ -364,7 +382,7 @@ const VirtualListComponent = defineComponent({
 
     return () => h(
       rootTag,
-      { onScroll: !pageMode && onScroll, class: 'vvsl-root' },
+      { onScroll: !pageMode && onScroll, id: ID_EL.ROOT },
       [
         // header slot
         header
@@ -411,7 +429,7 @@ const VirtualListComponent = defineComponent({
 
         // an empty element use to scroll to bottom
         h('div', {
-          class: 'vvsl-shepart',
+          id: ID_EL.SHEPART,
           style: { width: isHorizontal.value ? '0px' : '100%', height: isHorizontal.value ? '100%' : '0px' }
         })
       ]
