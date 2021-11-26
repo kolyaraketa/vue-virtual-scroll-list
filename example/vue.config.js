@@ -1,22 +1,6 @@
 const path = require('path')
 // https://cli.vuejs.org/config/#global-cli-config
 module.exports = {
-  chainWebpack: config => {
-		config.resolve.alias.set('vue', '@vue/compat')
-		config.module
-			.rule('vue')
-			.use('vue-loader')
-			.tap(options => {
-				return {
-					...options,
-					compilerOptions: {
-						compatConfig: {
-							MODE: 3
-						}
-					}
-				}
-			})
-	},
 
   publicPath: './',
 

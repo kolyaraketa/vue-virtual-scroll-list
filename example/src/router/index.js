@@ -48,6 +48,11 @@ const router = createRouter({
       path: '/dev',
       name: '/dev',
       component: () => import('../views/dev/Main.vue')
+    },
+    {
+      path: '/t',
+      name: '/t',
+      component: () => import('../views/t/Index.vue')
     }
   ]
 })

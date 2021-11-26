@@ -16,28 +16,11 @@ const SLOT_TYPE = {
   FOOTER: 'tfoot'
 }
 
-const getRenderList = ({ props, wrapStyle, range, $slots, wrapClass, role, isHorizontal }) => {
-  const { padFront, padBehind } = range
-  const style = {
-    ...wrapStyle,
-    padding: isHorizontal
-      ? `0px ${padBehind}px 0px ${padFront}px`
-      : `${padFront}px 0px ${padBehind}px`
-  }
-  return h(
-    props.wrapTag,
-    { class: wrapClass, role, style },
-    getRenderSlots({ props, range, $slots })
-  )
-}
-
 // get the real render slots based on range data
 // in-place patch strategy will try to reuse components as possible
 // so those components that are reused will not trigger lifecycle mounted
-const getRenderSlots = ({ props, range, $slots }) => {
-  console.log('🚀 ~ getRenderSlots ~ range', range)
+const getRenderSlots = ({ props, range, $slots, emit }) => {
   const slots = []
-  const { start, end } = range
   const {
     dataSources,
     dataKey,
@@ -50,7 +33,7 @@ const getRenderSlots = ({ props, range, $slots }) => {
     itemScopedSlots
   } = props
   const slotComponent = $slots && $slots.item
-  for (let index = start; index <= end; index++) {
+  for (let index = range.start; index <= range.end; index++) {
     const dataSource = dataSources[index]
     if (dataSource) {
       const uniqueKey =
@@ -59,6 +42,7 @@ const getRenderSlots = ({ props, range, $slots }) => {
         slots.push(
           h(Item, {
             index,
+            emit,
             tag: itemTag,
             event: EVENT_TYPE.ITEM,
             horizontal: isHorizontal,
@@ -68,6 +52,7 @@ const getRenderSlots = ({ props, range, $slots }) => {
             component: dataComponent,
             slotComponent,
             scopedSlots: itemScopedSlots,
+            range,
             key: uniqueKey,
             style: itemStyle,
             class: `${itemClass}${props.itemClassAdd ? ' ' + props.itemClassAdd(index) : ''}`
@@ -88,11 +73,13 @@ const VirtualListComponent = defineComponent({
 
   components: { Item, Slot },
 
-  // data () {
-  //   return {
-  //     range: null
-  //   }
-  // },
+  data () {
+    return {
+      // range: null
+      root: null,
+      shepherd: null
+    }
+  },
 
   watch: {
     'dataSources.length': {
@@ -124,6 +111,7 @@ const VirtualListComponent = defineComponent({
 
   mounted () {
     this.root = document.getElementById('vvsl-root')
+    this.shepart = document.getElementById('vvsl-shepart')
     // set position
     if (this.start) {
       this.scrollToIndex(this.start)
@@ -183,7 +171,7 @@ const VirtualListComponent = defineComponent({
 
     // set current scroll position to bottom
     scrollToBottom () {
-      const { shepherd } = this.$refs
+      const { shepherd } = this
       if (shepherd) {
         const offset = shepherd[this.isHorizontal ? 'offsetLeft' : 'offsetTop']
         this.scrollToOffset(offset)
@@ -192,7 +180,7 @@ const VirtualListComponent = defineComponent({
         // maybe list doesn't render and calculate to last range
         // so we need retry in next event loop until it really at bottom
         setTimeout(() => {
-          const el = this.$refs.root
+          const el = this.root
           if (this.getOffset(el, this.pageMode, this.directionKey) + this.getClientSize(el, this.pageMode, this.isHorizontal) < this.getScrollSize(el, this.pageMode, this.isHorizontal)) {
             this.scrollToBottom()
           }
@@ -238,10 +226,11 @@ const VirtualListComponent = defineComponent({
   },
 
   setup (props, { emit, slots, expose }) {
+    const range = ref({ start: 0, end: 0, padFront: 0, padBehind: 0 })
     const virtual = ref(null)
-    const range = ref(null)
     const isHorizontal = ref(null)
     const directionKey = ref(null)
+    const test = ref(0)
 
     const getUniqueIdFromDataSources = (dataKey, dataSources) => {
       return dataSources.map((dataSource) =>
@@ -250,7 +239,9 @@ const VirtualListComponent = defineComponent({
     }
 
     // here is the rerendering entry
-    const onRangeChanged = r => { range.value = r }
+    const onRangeChanged = r => {
+      range.value = r
+    }
 
     const installVirtual = () => {
       const virtual = new Virtual(
@@ -323,7 +314,7 @@ const VirtualListComponent = defineComponent({
       if (offset < 0 || offset + clientSize > scrollSize + 1 || !scrollSize) {
         return
       }
-      console.log(offset)
+      test.value++
       virtual.value.handleScroll(offset)
       emitEvent(offset, clientSize, scrollSize, e, props.dataSources)
     }
@@ -373,10 +364,7 @@ const VirtualListComponent = defineComponent({
 
     return () => h(
       rootTag,
-      {
-        ref: 'root',
-        onScroll: !pageMode && onScroll
-      },
+      { onScroll: !pageMode && onScroll, class: 'vvsl-root' },
       [
         // header slot
         header
@@ -393,8 +381,20 @@ const VirtualListComponent = defineComponent({
           )
           : null,
 
-        // List
-        getRenderList({ props, range: range.value, wrapStyle, $slots: slots, wrapClass, role: 'group', isHorizontal: isHorizontal.value }),
+        h(
+          props.wrapTag,
+          {
+            class: wrapClass,
+            role: 'group',
+            style: {
+              ...wrapStyle,
+              padding: isHorizontal.value
+                ? `0px ${range.value.padBehind}px 0px ${range.value.padFront}px`
+                : `${range.value.padFront}px 0px ${range.value.padBehind}px`
+            }
+          },
+          getRenderSlots({ props, range: range.value, $slots: slots, emit })
+        ),
 
         // footer slot
         footer
@@ -411,8 +411,8 @@ const VirtualListComponent = defineComponent({
 
         // an empty element use to scroll to bottom
         h('div', {
-          ref: 'shepherd',
-          style: { width: isHorizontal ? '0px' : '100%', height: isHorizontal ? '100%' : '0px' }
+          class: 'vvsl-shepart',
+          style: { width: isHorizontal.value ? '0px' : '100%', height: isHorizontal.value ? '100%' : '0px' }
         })
       ]
     )

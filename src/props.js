@@ -3,30 +3,13 @@
  */
 
 export const VirtualProps = {
-  dataKey: {
-    type: [String, Function],
-    required: true
-  },
-  dataSources: {
-    type: Array,
-    required: true
-  },
-  dataComponent: {
-    type: [Object, Function],
-    required: true
-  },
+  dataKey: { type: [String, Function], required: true },
+  dataSources: { type: Array, required: true },
+  dataComponent: { type: [Object, Function], required: true },
 
-  keeps: {
-    type: Number,
-    default: 30
-  },
-  extraProps: {
-    type: Object
-  },
-  estimateSize: {
-    type: Number,
-    default: 50
-  },
+  keeps: { type: Number, default: 30 },
+  extraProps: { type: Object },
+  estimateSize: { type: Number, default: 50 },
 
   direction: {
     type: String,
@@ -130,6 +113,9 @@ export const ItemProps = {
   slotComponent: {
     type: Function
   },
+  emit: {
+    type: Function
+  },
   uniqueKey: {
     type: [String, Number]
   },
@@ -137,6 +123,9 @@ export const ItemProps = {
     type: Object
   },
   scopedSlots: {
+    type: Object
+  },
+  range: {
     type: Object
   }
 }

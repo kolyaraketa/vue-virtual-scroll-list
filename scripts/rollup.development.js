@@ -4,7 +4,7 @@ import ProductionConfig from './rollup.production'
 export default Object.assign({}, ProductionConfig, {
   output: {
     ...ProductionConfig.output,
-    file: './dev/index.js',
+    file: './example/src/dev/index.js',
     sourcemap: true,
     banner: '/* eslint-disable */' // disable eslint when bundle with docs.
   }

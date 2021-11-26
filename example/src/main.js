@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import VirtualList from '../../src/index'
+import VirtualList from './dev/index'
 import Introduction from './components/Introduction'
 import CodeHighLight from './components/CodeHighLight'
 import Corner from './components/Corner'
