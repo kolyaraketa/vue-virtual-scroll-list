@@ -700,6 +700,10 @@
     }
   });
 
+  var ID_EL = {
+    ROOT: 'vlist-root',
+    SHEPHERD: 'vlist-shepherd'
+  };
   var EVENT_TYPE = {
     ITEM: 'item_resize',
     SLOT: 'slot_resize'
@@ -801,9 +805,7 @@
       this.scrollToOffset(this.virtual.offset);
     },
     mounted: function mounted() {
-      this.root = document.getElementById('vvsl-root');
-      this.shepart = document.getElementById('vvsl-shepart'); // set position
-
+      // set position
       if (this.start) {
         this.scrollToIndex(this.start);
       } else if (this.offset) {
@@ -826,58 +828,6 @@
       }
     },
     methods: {
-      // get item size by id
-      getSize: function getSize(id) {
-        return this.virtual.sizes.get(id);
-      },
-      // get the total number of stored (rendered) items
-      getSizes: function getSizes() {
-        return this.virtual.sizes.size;
-      },
-      // set current scroll position to a expectant offset
-      scrollToOffset: function scrollToOffset(offset) {
-        if (this.pageMode) {
-          document.body[this.directionKey] = offset;
-          document.documentElement[this.directionKey] = offset;
-        } else {
-          var root = this.root;
-
-          if (root) {
-            root[this.directionKey] = offset;
-          }
-        }
-      },
-      // set current scroll position to a expectant index
-      scrollToIndex: function scrollToIndex(index) {
-        // scroll to bottom
-        if (index >= this.dataSources.length - 1) {
-          this.scrollToBottom();
-        } else {
-          var offset = this.virtual.getOffset(index);
-          this.scrollToOffset(offset);
-        }
-      },
-      // set current scroll position to bottom
-      scrollToBottom: function scrollToBottom() {
-        var _this = this;
-
-        var shepherd = this.shepherd;
-
-        if (shepherd) {
-          var offset = shepherd[this.isHorizontal ? 'offsetLeft' : 'offsetTop'];
-          this.scrollToOffset(offset); // check if it's really scrolled to the bottom
-          // maybe list doesn't render and calculate to last range
-          // so we need retry in next event loop until it really at bottom
-
-          setTimeout(function () {
-            var el = _this.root;
-
-            if (_this.getOffset(el, _this.pageMode, _this.directionKey) + _this.getClientSize(el, _this.pageMode, _this.isHorizontal) < _this.getScrollSize(el, _this.pageMode, _this.isHorizontal)) {
-              _this.scrollToBottom();
-            }
-          }, 3);
-        }
-      },
       // when using page mode we need update slot header size manually
       // taking root offset relative to the browser as slot header size
       updatePageModeFront: function updatePageModeFront() {
@@ -889,12 +839,6 @@
           var offsetFront = this.isHorizontal ? rect.left + defaultView.pageXOffset : rect.top + defaultView.pageYOffset;
           this.virtual.updateParam('slotHeaderSize', offsetFront);
         }
-      },
-      // reset all state back to initial
-      reset: function reset() {
-        this.virtual.destroy();
-        this.scrollToOffset(0);
-        this.installVirtual();
       },
       // ----------- public method end -----------
       // event called when slot mounted or size changed
@@ -911,6 +855,8 @@
       }
     },
     setup: function setup(props, _ref2) {
+      var _this = this;
+
       var emit = _ref2.emit,
           slots = _ref2.slots,
           expose = _ref2.expose;
@@ -923,7 +869,8 @@
       var virtual = vue.ref(null);
       var isHorizontal = vue.ref(null);
       var directionKey = vue.ref(null);
-      var test = vue.ref(0);
+      var root = vue.ref(null);
+      var shepherd = vue.ref(null);
 
       var getUniqueIdFromDataSources = function getUniqueIdFromDataSources(dataKey, dataSources) {
         return dataSources.map(function (dataSource) {
@@ -952,6 +899,12 @@
         };
       };
 
+      var installNewVirtual = function installNewVirtual() {
+        var newVirtual = installVirtual();
+        virtual.value = newVirtual.virtual;
+        range.value = newVirtual.value;
+      };
+
       var header = slots.header,
           footer = slots.footer;
       var pageMode = props.pageMode,
@@ -966,10 +919,11 @@
           footerStyle = props.footerStyle,
           topThreshold = props.topThreshold;
       isHorizontal.value = props.direction === 'horizontal';
-      directionKey.value = isHorizontal.value ? 'scrollLeft' : 'scrollTop';
-      var newVirtual = installVirtual();
-      virtual.value = newVirtual.virtual;
-      range.value = newVirtual.value; // event called when each item mounted or size changed
+      directionKey.value = isHorizontal.value ? 'scrollLeft' : 'scrollTop'; // const newVirtual = installVirtual()
+      // virtual.value = newVirtual.virtual
+      // range.value = newVirtual.value
+
+      installNewVirtual(); // event called when each item mounted or size changed
       // const onItemResized = (id, size) => {
       //   virtual.value.saveSize(id, size)
       //   emit('resized', id, size)
@@ -1001,7 +955,6 @@
           return;
         }
 
-        test.value++;
         virtual.value.handleScroll(offset);
         emitEvent(offset, clientSize, scrollSize, e, props.dataSources);
       }; // return current scroll offset
@@ -1035,10 +988,68 @@
         } else {
           return el ? Math.ceil(el[key]) : 0;
         }
+      }; // set current scroll position to a expectant offset
+
+
+      var scrollToOffset = function scrollToOffset(offset) {
+        if (pageMode) {
+          if (!document) return;
+          document.body[directionKey.value] = offset;
+          document.documentElement[directionKey.value] = offset;
+        } else {
+          if (!root.value) {
+            root.value = document.getElementById(ID_EL.ROOT);
+          }
+
+          root.value[directionKey.value] = offset;
+        }
+      }; // set current scroll position to bottom
+
+
+      var scrollToBottom = function scrollToBottom() {
+        if (!shepherd.value) {
+          shepherd.value = document.getElementById(ID_EL.SHEPHERD);
+        }
+
+        var offset = shepherd[isHorizontal.value ? 'offsetLeft' : 'offsetTop'];
+        scrollToOffset(offset); // check if it's really scrolled to the bottom
+        // maybe list doesn't render and calculate to last range
+        // so we need retry in next event loop until it really at bottom
+
+        setTimeout(function () {
+          var el = root.value;
+
+          if (el && getOffset(el, _this.pageMode, _this.directionKey) + getClientSize(el, pageMode.value, isHorizontal.value) < getScrollSize(el, pageMode.value, isHorizontal.value)) {
+            scrollToBottom();
+          }
+        }, 3);
+      }; // set current scroll position to a expectant index
+
+
+      var scrollToIndex = function scrollToIndex(index) {
+        // scroll to bottom
+        if (index >= props.dataSources.length - 1) {
+          scrollToBottom();
+        } else {
+          var offset = virtual.value.getOffset(index);
+          scrollToOffset(offset);
+        }
+      }; // // get item size by id
+      // const getSize = id => virtual.value.sizes.get(id)
+      // // get the total number of stored (rendered) items
+      // const getSizes = () => virtual.value.sizes.size
+      // reset all state back to initial
+
+
+      var reset = function reset() {
+        virtual.value.destroy();
+        scrollToOffset(0);
+        installNewVirtual();
       };
 
       expose({
         range: range,
+        reset: reset,
         virtual: virtual,
         isHorizontal: isHorizontal,
         directionKey: directionKey,
@@ -1047,13 +1058,14 @@
         getOffset: getOffset,
         getClientSize: getClientSize,
         getScrollSize: getScrollSize,
+        scrollToIndex: scrollToIndex,
         installVirtual: installVirtual,
         getUniqueIdFromDataSources: getUniqueIdFromDataSources
       });
       return function () {
         return vue.h(rootTag, {
           onScroll: !pageMode && onScroll,
-          "class": 'vvsl-root'
+          id: ID_EL.ROOT
         }, [// header slot
         header ? vue.h(Slot, {
           "class": headerClass,
@@ -1083,7 +1095,7 @@
           }
         }, footer) : null, // an empty element use to scroll to bottom
         vue.h('div', {
-          "class": 'vvsl-shepart',
+          id: ID_EL.SHEPHERD,
           style: {
             width: isHorizontal.value ? '0px' : '100%',
             height: isHorizontal.value ? '100%' : '0px'
