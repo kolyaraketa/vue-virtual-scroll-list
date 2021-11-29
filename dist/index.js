@@ -774,86 +774,13 @@
       Item: Item,
       Slot: Slot
     },
-    data: function data() {
-      return {
-        // range: null
-        root: null,
-        shepherd: null
-      };
-    },
-    watch: {
-      'dataSources.length': {
-        handler: function handler() {
-          this.virtual.updateParam('uniqueIds', this.getUniqueIdFromDataSources(this.dataKey, this.dataSources));
-          this.virtual.handleDataSourcesChange();
-        },
-        deep: true
-      },
-      keeps: function keeps(newValue) {
-        this.virtual.updateParam('keeps', newValue);
-        this.virtual.handleSlotSizeChange();
-      },
-      start: function start(newValue) {
-        this.scrollToIndex(newValue);
-      },
-      offset: function offset(newValue) {
-        this.scrollToOffset(newValue);
-      }
-    },
-    // set back offset when awake from keep-alive
-    activated: function activated() {
-      this.scrollToOffset(this.virtual.offset);
-    },
-    mounted: function mounted() {
-      // set position
-      if (this.start) {
-        this.scrollToIndex(this.start);
-      } else if (this.offset) {
-        this.scrollToOffset(this.offset);
-      } // in page mode we bind scroll event to document
-
-
-      if (this.pageMode) {
-        this.updatePageModeFront();
-        document.addEventListener('scroll', this.onScroll, {
-          passive: false
-        });
-      }
-    },
-    beforeUnmount: function beforeUnmount() {
-      this.virtual.destroy();
-
-      if (this.pageMode) {
-        document.removeEventListener('scroll', this.onScroll);
-      }
-    },
-    methods: {
-      // when using page mode we need update slot header size manually
-      // taking root offset relative to the browser as slot header size
-      updatePageModeFront: function updatePageModeFront() {
-        var root = this.root;
-
-        if (root) {
-          var rect = root.getBoundingClientRect();
-          var defaultView = root.ownerDocument.defaultView;
-          var offsetFront = this.isHorizontal ? rect.left + defaultView.pageXOffset : rect.top + defaultView.pageYOffset;
-          this.virtual.updateParam('slotHeaderSize', offsetFront);
-        }
-      },
-      // ----------- public method end -----------
-      // event called when slot mounted or size changed
-      onSlotResized: function onSlotResized(type, size, hasInit) {
-        if (type === SLOT_TYPE.HEADER) {
-          this.virtual.updateParam('slotHeaderSize', size);
-        } else if (type === SLOT_TYPE.FOOTER) {
-          this.virtual.updateParam('slotFooterSize', size);
-        }
-
-        if (hasInit) {
-          this.virtual.handleSlotSizeChange();
-        }
-      }
-    },
+    // data () {
+    //   return {
+    //     // range: null
+    //     root: null,
+    //     shepherd: null
+    //   }
+    // },
     setup: function setup(props, _ref2) {
       var _this = this;
 
@@ -1011,7 +938,7 @@
           shepherd.value = document.getElementById(ID_EL.SHEPHERD);
         }
 
-        var offset = shepherd[isHorizontal.value ? 'offsetLeft' : 'offsetTop'];
+        var offset = shepherd.value[isHorizontal.value ? 'offsetLeft' : 'offsetTop'];
         scrollToOffset(offset); // check if it's really scrolled to the bottom
         // maybe list doesn't render and calculate to last range
         // so we need retry in next event loop until it really at bottom
@@ -1019,7 +946,7 @@
         setTimeout(function () {
           var el = root.value;
 
-          if (el && getOffset(el, _this.pageMode, _this.directionKey) + getClientSize(el, pageMode.value, isHorizontal.value) < getScrollSize(el, pageMode.value, isHorizontal.value)) {
+          if (el && getOffset(el, pageMode.value, directionKey.value) + getClientSize(el, pageMode.value, isHorizontal.value) < getScrollSize(el, pageMode.value, isHorizontal.value)) {
             scrollToBottom();
           }
         }, 3);
@@ -1045,7 +972,75 @@
         virtual.value.destroy();
         scrollToOffset(0);
         installNewVirtual();
+      }; // when using page mode we need update slot header size manually
+      // taking root offset relative to the browser as slot header size
+
+
+      var updatePageModeFront = function updatePageModeFront() {
+        var r = root.value;
+
+        if (r) {
+          var rect = r.getBoundingClientRect();
+          var defaultView = r.ownerDocument.defaultView;
+          var offsetFront = _this.isHorizontal ? rect.left + defaultView.pageXOffset : rect.top + defaultView.pageYOffset;
+          virtual.updateParam('slotHeaderSize', offsetFront);
+        }
+      }; // ----------- public method end -----------
+      // event called when slot mounted or size changed
+
+
+      var onSlotResized = function onSlotResized(type, size, hasInit) {
+        if (type === SLOT_TYPE.HEADER) {
+          virtual.updateParam('slotHeaderSize', size);
+        } else if (type === SLOT_TYPE.FOOTER) {
+          virtual.updateParam('slotFooterSize', size);
+        }
+
+        if (hasInit) {
+          virtual.handleSlotSizeChange();
+        }
       };
+
+      vue.onMounted(function () {
+        // set position
+        if (props.start) scrollToIndex(props.start);else if (props.offset) scrollToOffset(props.offset); // in page mode we bind scroll event to document
+
+        if (pageMode.value) {
+          updatePageModeFront();
+          document.addEventListener('scroll', onScroll, {
+            passive: false
+          });
+        }
+      });
+      vue.onBeforeUnmount(function () {
+        virtual.destroy();
+        if (pageMode.value) document.removeEventListener('scroll', onScroll);
+      });
+      vue.watch(function () {
+        return props.dataSources.length;
+      }, function () {
+        virtual.updateParam('uniqueIds', getUniqueIdFromDataSources(props.dataKey, props.dataSources));
+        virtual.handleDataSourcesChange();
+      });
+      vue.watch(function () {
+        return props.keeps;
+      }, function (newValue) {
+        virtual.updateParam('keeps', newValue);
+        virtual.handleSlotSizeChange();
+      });
+      vue.watch(function () {
+        return props.start;
+      }, function (newValue) {
+        return scrollToIndex(newValue);
+      });
+      vue.watch(function () {
+        return props.offset;
+      }, function (newValue) {
+        return scrollToOffset(newValue);
+      });
+      vue.onActivated(function () {
+        return scrollToOffset(virtual.offset);
+      }); // set back offset when awake from keep-alive
 
       expose({
         range: range,
@@ -1061,6 +1056,9 @@
         scrollToIndex: scrollToIndex,
         installVirtual: installVirtual,
         scrollToOffset: scrollToOffset,
+        updatePageModeFront: updatePageModeFront,
+        onSlotResized: onSlotResized,
+        scrollToBottom: scrollToBottom,
         getUniqueIdFromDataSources: getUniqueIdFromDataSources
       });
       return function () {

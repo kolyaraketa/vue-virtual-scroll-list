@@ -2,7 +2,7 @@
  * virtual list default component
  */
 
-import { defineComponent, h, ref } from 'vue'
+import { defineComponent, h, ref, watch, onActivated, onMounted, onBeforeUnmount } from 'vue'
 import Virtual from './virtual'
 import { Item, Slot } from './item'
 import { VirtualProps } from './props'
@@ -76,98 +76,13 @@ const VirtualListComponent = defineComponent({
 
   components: { Item, Slot },
 
-  data () {
-    return {
-      // range: null
-      root: null,
-      shepherd: null
-    }
-  },
-
-  watch: {
-    'dataSources.length': {
-      handler () {
-        this.virtual.updateParam(
-          'uniqueIds',
-          this.getUniqueIdFromDataSources(this.dataKey, this.dataSources)
-        )
-        this.virtual.handleDataSourcesChange()
-      },
-      deep: true
-    },
-
-    keeps (newValue) {
-      this.virtual.updateParam('keeps', newValue)
-      this.virtual.handleSlotSizeChange()
-    },
-
-    start (newValue) {
-      this.scrollToIndex(newValue)
-    },
-
-    offset (newValue) {
-      this.scrollToOffset(newValue)
-    }
-  },
-
-  // set back offset when awake from keep-alive
-  activated () {
-    this.scrollToOffset(this.virtual.offset)
-  },
-
-  mounted () {
-    // set position
-    if (this.start) {
-      this.scrollToIndex(this.start)
-    } else if (this.offset) {
-      this.scrollToOffset(this.offset)
-    }
-
-    // in page mode we bind scroll event to document
-    if (this.pageMode) {
-      this.updatePageModeFront()
-
-      document.addEventListener('scroll', this.onScroll, { passive: false })
-    }
-  },
-
-  beforeUnmount () {
-    this.virtual.destroy()
-    if (this.pageMode) {
-      document.removeEventListener('scroll', this.onScroll)
-    }
-  },
-
-  methods: {
-    // when using page mode we need update slot header size manually
-    // taking root offset relative to the browser as slot header size
-    updatePageModeFront () {
-      const root = this.root
-      if (root) {
-        const rect = root.getBoundingClientRect()
-        const { defaultView } = root.ownerDocument
-        const offsetFront = this.isHorizontal
-          ? rect.left + defaultView.pageXOffset
-          : rect.top + defaultView.pageYOffset
-        this.virtual.updateParam('slotHeaderSize', offsetFront)
-      }
-    },
-
-    // ----------- public method end -----------
-
-    // event called when slot mounted or size changed
-    onSlotResized (type, size, hasInit) {
-      if (type === SLOT_TYPE.HEADER) {
-        this.virtual.updateParam('slotHeaderSize', size)
-      } else if (type === SLOT_TYPE.FOOTER) {
-        this.virtual.updateParam('slotFooterSize', size)
-      }
-
-      if (hasInit) {
-        this.virtual.handleSlotSizeChange()
-      }
-    }
-  },
+  // data () {
+  //   return {
+  //     // range: null
+  //     root: null,
+  //     shepherd: null
+  //   }
+  // },
 
   setup (props, { emit, slots, expose }) {
     const range = ref({ start: 0, end: 0, padFront: 0, padBehind: 0 })
@@ -315,7 +230,7 @@ const VirtualListComponent = defineComponent({
       if (!shepherd.value) {
         shepherd.value = document.getElementById(ID_EL.SHEPHERD)
       }
-      const offset = shepherd[isHorizontal.value ? 'offsetLeft' : 'offsetTop']
+      const offset = shepherd.value[isHorizontal.value ? 'offsetLeft' : 'offsetTop']
       scrollToOffset(offset)
 
       // check if it's really scrolled to the bottom
@@ -325,7 +240,7 @@ const VirtualListComponent = defineComponent({
         const el = root.value
         if (
           el &&
-          getOffset(el, this.pageMode, this.directionKey) +
+          getOffset(el, pageMode.value, directionKey.value) +
             getClientSize(el, pageMode.value, isHorizontal.value) <
             getScrollSize(el, pageMode.value, isHorizontal.value)
         ) {
@@ -358,6 +273,66 @@ const VirtualListComponent = defineComponent({
       installNewVirtual()
     }
 
+    // when using page mode we need update slot header size manually
+    // taking root offset relative to the browser as slot header size
+    const updatePageModeFront = () => {
+      const r = root.value
+      if (r) {
+        const rect = r.getBoundingClientRect()
+        const { defaultView } = r.ownerDocument
+        const offsetFront = this.isHorizontal
+          ? rect.left + defaultView.pageXOffset
+          : rect.top + defaultView.pageYOffset
+        virtual.updateParam('slotHeaderSize', offsetFront)
+      }
+    }
+
+    // ----------- public method end -----------
+
+    // event called when slot mounted or size changed
+    const onSlotResized = (type, size, hasInit) => {
+      if (type === SLOT_TYPE.HEADER) {
+        virtual.updateParam('slotHeaderSize', size)
+      } else if (type === SLOT_TYPE.FOOTER) {
+        virtual.updateParam('slotFooterSize', size)
+      }
+
+      if (hasInit) {
+        virtual.handleSlotSizeChange()
+      }
+    }
+
+    onMounted(() => {
+      // set position
+      if (props.start) scrollToIndex(props.start)
+      else if (props.offset) scrollToOffset(props.offset)
+      // in page mode we bind scroll event to document
+      if (pageMode.value) {
+        updatePageModeFront()
+        document.addEventListener('scroll', onScroll, { passive: false })
+      }
+    })
+
+    onBeforeUnmount(() => {
+      virtual.destroy()
+      if (pageMode.value) document.removeEventListener('scroll', onScroll)
+    })
+
+    watch(() => props.dataSources.length, () => {
+      virtual.updateParam(
+        'uniqueIds',
+        getUniqueIdFromDataSources(props.dataKey, props.dataSources)
+      )
+      virtual.handleDataSourcesChange()
+    })
+    watch(() => props.keeps, newValue => {
+      virtual.updateParam('keeps', newValue)
+      virtual.handleSlotSizeChange()
+    })
+    watch(() => props.start, newValue => scrollToIndex(newValue))
+    watch(() => props.offset, newValue => scrollToOffset(newValue))
+    onActivated(() => scrollToOffset(virtual.offset)) // set back offset when awake from keep-alive
+
     expose({
       range,
       reset,
@@ -372,6 +347,9 @@ const VirtualListComponent = defineComponent({
       scrollToIndex,
       installVirtual,
       scrollToOffset,
+      updatePageModeFront,
+      onSlotResized,
+      scrollToBottom,
       getUniqueIdFromDataSources
     })
 
