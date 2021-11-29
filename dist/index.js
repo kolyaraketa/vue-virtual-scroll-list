@@ -1060,6 +1060,7 @@
         getScrollSize: getScrollSize,
         scrollToIndex: scrollToIndex,
         installVirtual: installVirtual,
+        scrollToOffset: scrollToOffset,
         getUniqueIdFromDataSources: getUniqueIdFromDataSources
       });
       return function () {

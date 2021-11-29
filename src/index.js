@@ -371,6 +371,7 @@ const VirtualListComponent = defineComponent({
       getScrollSize,
       scrollToIndex,
       installVirtual,
+      scrollToOffset,
       getUniqueIdFromDataSources
     })
 
