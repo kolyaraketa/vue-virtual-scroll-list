@@ -2,7 +2,16 @@
  * virtual list default component
  */
 
-import { defineComponent, h, ref, watch, onActivated, onMounted, onBeforeUnmount } from 'vue'
+import {
+  defineComponent,
+  h,
+  shallowRef,
+  ref,
+  watch,
+  onActivated,
+  onMounted,
+  onBeforeUnmount
+} from 'vue'
 import Virtual from './virtual'
 import { Item, Slot } from './item'
 import { VirtualProps } from './props'
@@ -85,8 +94,8 @@ const VirtualListComponent = defineComponent({
   // },
 
   setup (props, { emit, slots, expose }) {
-    const range = ref({ start: 0, end: 0, padFront: 0, padBehind: 0 })
-    const virtual = ref(null)
+    const range = shallowRef({ start: 0, end: 0, padFront: 0, padBehind: 0 })
+    const virtual = shallowRef(null)
     const isHorizontal = ref(null)
     const directionKey = ref(null)
     const root = ref(null)
@@ -318,19 +327,31 @@ const VirtualListComponent = defineComponent({
       if (pageMode.value) document.removeEventListener('scroll', onScroll)
     })
 
-    watch(() => props.dataSources.length, () => {
-      virtual.updateParam(
-        'uniqueIds',
-        getUniqueIdFromDataSources(props.dataKey, props.dataSources)
-      )
-      virtual.handleDataSourcesChange()
-    })
-    watch(() => props.keeps, newValue => {
-      virtual.updateParam('keeps', newValue)
-      virtual.handleSlotSizeChange()
-    })
-    watch(() => props.start, newValue => scrollToIndex(newValue))
-    watch(() => props.offset, newValue => scrollToOffset(newValue))
+    watch(
+      () => props.dataSources.length,
+      () => {
+        virtual.updateParam(
+          'uniqueIds',
+          getUniqueIdFromDataSources(props.dataKey, props.dataSources)
+        )
+        virtual.handleDataSourcesChange()
+      }
+    )
+    watch(
+      () => props.keeps,
+      (newValue) => {
+        virtual.updateParam('keeps', newValue)
+        virtual.handleSlotSizeChange()
+      }
+    )
+    watch(
+      () => props.start,
+      (newValue) => scrollToIndex(newValue)
+    )
+    watch(
+      () => props.offset,
+      (newValue) => scrollToOffset(newValue)
+    )
     onActivated(() => scrollToOffset(virtual.offset)) // set back offset when awake from keep-alive
 
     expose({

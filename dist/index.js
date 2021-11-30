@@ -787,13 +787,13 @@
       var emit = _ref2.emit,
           slots = _ref2.slots,
           expose = _ref2.expose;
-      var range = vue.ref({
+      var range = vue.shallowRef({
         start: 0,
         end: 0,
         padFront: 0,
         padBehind: 0
       });
-      var virtual = vue.ref(null);
+      var virtual = vue.shallowRef(null);
       var isHorizontal = vue.ref(null);
       var directionKey = vue.ref(null);
       var root = vue.ref(null);
