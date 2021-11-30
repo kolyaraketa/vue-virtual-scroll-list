@@ -973,7 +973,7 @@
           var rect = r.getBoundingClientRect();
           var defaultView = r.ownerDocument.defaultView;
           var offsetFront = _this.isHorizontal ? rect.left + defaultView.pageXOffset : rect.top + defaultView.pageYOffset;
-          virtual.updateParam('slotHeaderSize', offsetFront);
+          virtual.value.updateParam('slotHeaderSize', offsetFront);
         }
       }; // ----------- public method end -----------
       // event called when slot mounted or size changed
@@ -981,13 +981,13 @@
 
       var onSlotResized = function onSlotResized(type, size, hasInit) {
         if (type === SLOT_TYPE.HEADER) {
-          virtual.updateParam('slotHeaderSize', size);
+          virtual.value.updateParam('slotHeaderSize', size);
         } else if (type === SLOT_TYPE.FOOTER) {
-          virtual.updateParam('slotFooterSize', size);
+          virtual.value.updateParam('slotFooterSize', size);
         }
 
         if (hasInit) {
-          virtual.handleSlotSizeChange();
+          virtual.value.handleSlotSizeChange();
         }
       };
 
@@ -1003,20 +1003,20 @@
         }
       });
       vue.onBeforeUnmount(function () {
-        virtual.destroy();
+        virtual.value.destroy();
         if (pageMode.value) document.removeEventListener('scroll', onScroll);
       });
       vue.watch(function () {
         return props.dataSources.length;
       }, function () {
-        virtual.updateParam('uniqueIds', getUniqueIdFromDataSources(props.dataKey, props.dataSources));
-        virtual.handleDataSourcesChange();
+        virtual.value.updateParam('uniqueIds', getUniqueIdFromDataSources(props.dataKey, props.dataSources));
+        virtual.value.handleDataSourcesChange();
       });
       vue.watch(function () {
         return props.keeps;
       }, function (newValue) {
-        virtual.updateParam('keeps', newValue);
-        virtual.handleSlotSizeChange();
+        virtual.value.updateParam('keeps', newValue);
+        virtual.value.handleSlotSizeChange();
       });
       vue.watch(function () {
         return props.start;
@@ -1029,7 +1029,7 @@
         return scrollToOffset(newValue);
       });
       vue.onActivated(function () {
-        return scrollToOffset(virtual.offset);
+        return scrollToOffset(virtual.value.offset);
       }); // set back offset when awake from keep-alive
 
       expose({
