@@ -5,7 +5,6 @@
 import {
   defineComponent,
   h,
-  shallowRef,
   ref,
   watch,
   onActivated,
@@ -85,17 +84,9 @@ const VirtualListComponent = defineComponent({
 
   components: { Item, Slot },
 
-  // data () {
-  //   return {
-  //     // range: null
-  //     root: null,
-  //     shepherd: null
-  //   }
-  // },
-
   setup (props, { emit, slots, expose }) {
-    const range = shallowRef({ start: 0, end: 0, padFront: 0, padBehind: 0 })
-    const virtual = shallowRef(null)
+    const range = ref({ start: 0, end: 0, padFront: 0, padBehind: 0 })
+    const virtual = ref(null)
     const isHorizontal = ref(null)
     const directionKey = ref(null)
     const root = ref(null)
@@ -150,9 +141,7 @@ const VirtualListComponent = defineComponent({
 
     isHorizontal.value = props.direction === 'horizontal'
     directionKey.value = isHorizontal.value ? 'scrollLeft' : 'scrollTop'
-    // const newVirtual = installVirtual()
-    // virtual.value = newVirtual.virtual
-    // range.value = newVirtual.value
+
     installNewVirtual()
 
     // event called when each item mounted or size changed
@@ -292,7 +281,7 @@ const VirtualListComponent = defineComponent({
         const offsetFront = this.isHorizontal
           ? rect.left + defaultView.pageXOffset
           : rect.top + defaultView.pageYOffset
-        virtual.updateParam('slotHeaderSize', offsetFront)
+        virtual.value.updateParam('slotHeaderSize', offsetFront)
       }
     }
 
@@ -301,13 +290,13 @@ const VirtualListComponent = defineComponent({
     // event called when slot mounted or size changed
     const onSlotResized = (type, size, hasInit) => {
       if (type === SLOT_TYPE.HEADER) {
-        virtual.updateParam('slotHeaderSize', size)
+        virtual.value.updateParam('slotHeaderSize', size)
       } else if (type === SLOT_TYPE.FOOTER) {
-        virtual.updateParam('slotFooterSize', size)
+        virtual.value.updateParam('slotFooterSize', size)
       }
 
       if (hasInit) {
-        virtual.handleSlotSizeChange()
+        virtual.value.handleSlotSizeChange()
       }
     }
 
@@ -323,25 +312,25 @@ const VirtualListComponent = defineComponent({
     })
 
     onBeforeUnmount(() => {
-      virtual.destroy()
+      virtual.value.destroy()
       if (pageMode.value) document.removeEventListener('scroll', onScroll)
     })
 
     watch(
       () => props.dataSources.length,
       () => {
-        virtual.updateParam(
+        virtual.value.updateParam(
           'uniqueIds',
           getUniqueIdFromDataSources(props.dataKey, props.dataSources)
         )
-        virtual.handleDataSourcesChange()
+        virtual.value.handleDataSourcesChange()
       }
     )
     watch(
       () => props.keeps,
       (newValue) => {
-        virtual.updateParam('keeps', newValue)
-        virtual.handleSlotSizeChange()
+        virtual.value.updateParam('keeps', newValue)
+        virtual.value.handleSlotSizeChange()
       }
     )
     watch(
@@ -352,7 +341,7 @@ const VirtualListComponent = defineComponent({
       () => props.offset,
       (newValue) => scrollToOffset(newValue)
     )
-    onActivated(() => scrollToOffset(virtual.offset)) // set back offset when awake from keep-alive
+    onActivated(() => scrollToOffset(virtual.value.offset)) // set back offset when awake from keep-alive
 
     expose({
       range,

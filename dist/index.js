@@ -774,26 +774,19 @@
       Item: Item,
       Slot: Slot
     },
-    // data () {
-    //   return {
-    //     // range: null
-    //     root: null,
-    //     shepherd: null
-    //   }
-    // },
     setup: function setup(props, _ref2) {
       var _this = this;
 
       var emit = _ref2.emit,
           slots = _ref2.slots,
           expose = _ref2.expose;
-      var range = vue.shallowRef({
+      var range = vue.ref({
         start: 0,
         end: 0,
         padFront: 0,
         padBehind: 0
       });
-      var virtual = vue.shallowRef(null);
+      var virtual = vue.ref(null);
       var isHorizontal = vue.ref(null);
       var directionKey = vue.ref(null);
       var root = vue.ref(null);
@@ -846,10 +839,7 @@
           footerStyle = props.footerStyle,
           topThreshold = props.topThreshold;
       isHorizontal.value = props.direction === 'horizontal';
-      directionKey.value = isHorizontal.value ? 'scrollLeft' : 'scrollTop'; // const newVirtual = installVirtual()
-      // virtual.value = newVirtual.virtual
-      // range.value = newVirtual.value
-
+      directionKey.value = isHorizontal.value ? 'scrollLeft' : 'scrollTop';
       installNewVirtual(); // event called when each item mounted or size changed
       // const onItemResized = (id, size) => {
       //   virtual.value.saveSize(id, size)
