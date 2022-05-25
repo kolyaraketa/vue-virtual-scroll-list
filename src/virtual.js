@@ -140,6 +140,7 @@ export default class Virtual {
   handleScroll (offset) {
     this.direction = offset < this.offset ? DIRECTION_TYPE.FRONT : DIRECTION_TYPE.BEHIND
     this.offset = offset
+
     if (!this.param) {
       return
     }

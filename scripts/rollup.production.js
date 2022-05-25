@@ -1,6 +1,5 @@
 import babel from 'rollup-plugin-babel'
 import bannerString from './rollup.banner'
-import vue from 'rollup-plugin-vue'
 
 export default {
   external: ['vue'],
@@ -11,12 +10,11 @@ export default {
     name: 'VirtualList',
     sourcemap: false,
     globals: {
-      vue: 'Vue'
+      vue: 'Vue',
     },
     banner: bannerString.replace(/\n/, '')
   },
   plugins: [
-    babel(),
-    vue()
+    babel()
   ]
 }

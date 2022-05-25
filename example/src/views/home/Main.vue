@@ -9,6 +9,18 @@
     <div class="desc">⚡️ A vue component support big amount data list with high scroll performance.</div>
 
     <div class="icons">
+      <span class="btn">
+        <github-button href="https://github.com/tangbc/vue-virtual-scroll-list/issues" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Issue tangbc/vue-virtual-scroll-list on GitHub">Issue</github-button>
+      </span>
+      <span class="btn">
+        <github-button href="https://github.com/tangbc/vue-virtual-scroll-list" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star tangbc/vue-virtual-scroll-list on GitHub">Star</github-button>
+      </span>
+      <span class="btn">
+        <github-button href="https://github.com/tangbc/vue-virtual-scroll-list/fork" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Fork tangbc/vue-virtual-scroll-list on GitHub">Fork</github-button>
+      </span>
+      <span class="btn">
+        <github-button href="https://github.com/tangbc/vue-virtual-scroll-list/subscription" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Watch tangbc/vue-virtual-scroll-list on GitHub">Watch</github-button>
+      </span>
     </div>
 
     <!-- <div class="head">

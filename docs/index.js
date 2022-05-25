@@ -583,7 +583,7 @@
     updated: function updated() {
       this.dispatchSizeChange();
     },
-    beforeUnmount: function beforeUnmount() {
+    beforeDestroy: function beforeDestroy() {
       if (this.resizeObserver) {
         this.resizeObserver.disconnect();
         this.resizeObserver = null;
@@ -660,6 +660,22 @@
         range: null
       };
     },
+    watch: {
+      'dataSources.length': function dataSourcesLength() {
+        this.virtual.updateParam('uniqueIds', this.getUniqueIdFromDataSources());
+        this.virtual.handleDataSourcesChange();
+      },
+      keeps: function keeps(newValue) {
+        this.virtual.updateParam('keeps', newValue);
+        this.virtual.handleSlotSizeChange();
+      },
+      start: function start(newValue) {
+        this.scrollToIndex(newValue);
+      },
+      offset: function offset(newValue) {
+        this.scrollToOffset(newValue);
+      }
+    },
     created: function created() {
       this.isHorizontal = this.direction === 'horizontal';
       this.directionKey = this.isHorizontal ? 'scrollLeft' : 'scrollTop';
@@ -691,7 +707,7 @@
         });
       }
     },
-    beforeUnmount: function beforeUnmount() {
+    beforeDestroy: function beforeDestroy() {
       this.virtual.destroy();
 
       if (this.pageMode) {

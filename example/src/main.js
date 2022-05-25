@@ -1,20 +1,25 @@
-import { createApp } from 'vue'
+import Vue from 'vue'
 import App from './App.vue'
 import router from './router'
-import VirtualList from './dev/index'
+
+import GithubButton from 'vue-github-button'
+import VirtualList from '../../src/index'
 import Introduction from './components/Introduction'
 import CodeHighLight from './components/CodeHighLight'
 import Corner from './components/Corner'
 import Tab from './components/Tab'
 
-const app = createApp(App)
+Vue.component('virtual-list', VirtualList)
+Vue.component(Introduction.name, Introduction)
+Vue.component(CodeHighLight.name, CodeHighLight)
+Vue.component(Corner.name, Corner)
+Vue.component(Tab.name, Tab)
+Vue.component('github-button', GithubButton)
 
-app.use(router)
+Vue.config.devtools = false
+Vue.config.productionTip = false
 
-app.component('virtual-list', VirtualList)
-app.component(Introduction.name, Introduction)
-app.component(CodeHighLight.name, CodeHighLight)
-app.component(Corner.name, Corner)
-app.component(Tab.name, Tab)
-
-app.mount('#app')
+new Vue({
+  router,
+  render: h => h(App)
+}).$mount('#app')
